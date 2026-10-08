@@ -15,11 +15,19 @@ function Admin.CopyCamera()
         :format(Admin.Format('vec3', c), r.x, r.y, r.z, GetFinalRenderedCamFov()), 'camera')
 end
 
+--- Spawn code of the car you are in (what /car, the spawner and the poll use).
+--- spz-vehicles tags every car it spawns with its real model name; the game's
+--- display name is only a fallback, because it is often not the spawn code
+--- (add-ons read "CARNOTFOUND", many vanilla cars differ).
 function Admin.CopyVehicle()
     local veh = GetVehiclePedIsIn(PlayerPedId(), false)
     if veh == 0 then return Admin.Notify('Not in a vehicle', 'error') end
-    local model = GetEntityModel(veh)
-    Admin.Copy(('%s (%d)'):format(GetDisplayNameFromVehicleModel(model):lower(), model), 'vehicle model')
+    local code = Entity(veh).state.modelName
+    if type(code) ~= 'string' or code == '' then
+        local name = GetDisplayNameFromVehicleModel(GetEntityModel(veh))
+        code = (name and name ~= 'CARNOTFOUND') and name or tostring(GetEntityModel(veh))
+    end
+    Admin.Copy(code:lower(), 'spawn code')
 end
 
 local function draw(text, x, y, scale)

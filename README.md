@@ -88,6 +88,7 @@ Without these lines, a granted player can use this menu only, and the menu tells
 | `/spec <id>` | Spectate a player |
 | `/ride <id>` | Ride along with a player |
 | `/vec3` · `/vec4` · `/heading` | Copy your position to the clipboard |
+| `/carcode` | Copy the spawn code of the car you are in |
 
 While spectating: `←/→` switch player · `↑` toggle spectate/ride · `Backspace` stop.
 Entity inspector: `E` copy vec4 · `G` copy model · `DEL` delete the entity.

@@ -465,7 +465,7 @@ local function openDev()
             copy('json', 'JSON', '{"x":..,"y":..,"z":..,"w":..}'),
             { title = 'Copy camera', icon = 'camera', description = 'Cam coords, rotation and FOV',
                 onSelect = function() Admin.CopyCamera() end },
-            { title = 'Copy vehicle model', icon = 'car', onSelect = function() Admin.CopyVehicle() end },
+            { title = 'Copy car spawn code', icon = 'car', description = '/carcode', onSelect = function() Admin.CopyVehicle() end },
             { title = ('Coords overlay: %s'):format(Admin.Dev.overlay and 'ON' or 'off'), icon = 'ruler-combined',
                 onSelect = function() Admin.ToggleOverlay(); openDev() end },
             { title = ('Entity inspector: %s'):format(Admin.Dev.inspector and 'ON' or 'off'), icon = 'magnifying-glass',
@@ -743,6 +743,8 @@ end, false)
 RegisterKeyMapping('admin', 'Admin: open menu', 'keyboard', Config.MenuKey)
 
 -- Quick dev commands.
+-- /carcode — copy the spawn code of the car you are in.
+RegisterCommand('carcode', function() if Admin.Call('isAdmin') then Admin.CopyVehicle() end end, false)
 RegisterCommand('vec3', function() if Admin.Call('isAdmin') then Admin.CopyCoords('vec3') end end, false)
 RegisterCommand('vec4', function() if Admin.Call('isAdmin') then Admin.CopyCoords('vec4') end end, false)
 RegisterCommand('heading', function() if Admin.Call('isAdmin') then Admin.CopyCoords('heading') end end, false)
