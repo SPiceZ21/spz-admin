@@ -25,6 +25,7 @@ server_scripts {
     'server/main.lua',
     'server/admins.lua',
     'server/view.lua',
+    'server/rank.lua',
 }
 
 dependencies {

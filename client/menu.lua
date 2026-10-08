@@ -109,6 +109,113 @@ local function openTroll(p, backTo)
     lib.showContext('spz_admin_troll')
 end
 
+-- ── Ranking (spz-progression) ────────────────────────────────────────────────
+-- All rank admin controls live here; spz-progression has no admin commands.
+
+local openRanking
+
+local function voidRace(raceId, back)
+    if not confirm('Void race ' .. raceId .. '?',
+        'Every rank point given or taken in this race is reversed. Nobody drops below the floor of their current class.') then
+        return back()
+    end
+    local ok, msg = Admin.Call('voidRace', raceId)
+    done(ok, msg, msg)
+    back()
+end
+
+local function openRank(p, backTo)
+    local r = Admin.Call('rankInfo', p.id)
+    if not r then return Admin.Notify('No rank data (spz-progression not running, or player has no profile)', 'error') end
+
+    local opts = {
+        {
+            title = ('%s  ·  %d RP'):format(r.rank, r.rp),
+            description = r.nextRank and ('%d%% to %s'):format(math.floor((r.progress or 0) * 100), r.nextRank) or 'Top rung (S-1)',
+            icon = 'ranking-star', readOnly = true,
+            progress = math.floor((r.progress or 0) * 100),
+            metadata = {
+                { label = 'Streak', value = r.streak },
+                { label = 'RP today', value = ('%d / %d'):format(r.today, r.dailyCap) },
+                { label = 'Safety Rating', value = ('%.2f'):format(r.sr) },
+                { label = 'iRating', value = r.iRating },
+            },
+        },
+        { title = 'Set rank points…', icon = 'pen-to-square', iconColor = '#e8a33d',
+            description = 'Rank and class follow from the value',
+            onSelect = function()
+                local i = lib.inputDialog('Rank points · ' .. p.name, {
+                    { type = 'number', label = 'Rank points', default = r.rp, min = 0, required = true },
+                })
+                if i then
+                    local ok, msg = Admin.Call('setRP', p.id, i[1])
+                    done(ok, msg, msg)
+                end
+                openRank(p, backTo)
+            end },
+        { title = 'Recent races', readOnly = true },
+    }
+    for _, a in ipairs(r.recent or {}) do
+        local voided = tonumber(a.voided) == 1
+        opts[#opts + 1] = {
+            title = ('%s  ·  P%d/%d  ·  %+d RP'):format(a.race_id, a.position, a.n_field, a.delta),
+            description = voided and 'voided' or 'select to void this whole race',
+            icon = voided and 'ban' or 'flag-checkered',
+            disabled = voided,
+            onSelect = function() voidRace(a.race_id, function() openRank(p, backTo) end) end,
+        }
+    end
+    if #(r.recent or {}) == 0 then opts[#opts + 1] = { title = 'No rated races yet', readOnly = true } end
+
+    lib.registerContext({ id = 'spz_admin_rank', title = 'Rank · ' .. p.name, menu = backTo, options = opts })
+    lib.showContext('spz_admin_rank')
+end
+
+local function openRaces()
+    local races = Admin.Call('recentRaces') or {}
+    local opts = {}
+    for _, rc in ipairs(races) do
+        local allVoid = tonumber(rc.voided_rows) == tonumber(rc.players)
+        opts[#opts + 1] = {
+            title = rc.race_id,
+            description = ('%d player(s) · +%d RP given · %s%s'):format(tonumber(rc.players) or 0, tonumber(rc.rp_given) or 0,
+                tostring(rc.at or ''), allVoid and ' · voided' or ''),
+            icon = allVoid and 'ban' or 'flag-checkered',
+            disabled = allVoid,
+            onSelect = function() voidRace(rc.race_id, openRaces) end,
+        }
+    end
+    if #opts == 0 then opts[1] = { title = 'No rated races yet', readOnly = true } end
+    lib.registerContext({ id = 'spz_admin_races', title = 'Recent rated races', menu = 'spz_admin_ranking', options = opts })
+    lib.showContext('spz_admin_races')
+end
+
+function openRanking()
+    local st = Admin.Call('rankStats')
+    if not st then return Admin.Notify('spz-progression is not running', 'error') end
+    local opts = {
+        { title = 'Overview', icon = 'chart-simple', readOnly = true,
+            description = ('%d race(s) scored today · %d daily-cap hit(s)'):format(st.racesToday, st.capHits),
+            metadata = {
+                { label = 'Class C', value = st.classes.C }, { label = 'Class B', value = st.classes.B },
+                { label = 'Class A', value = st.classes.A }, { label = 'Class S', value = st.classes.S },
+                { label = 'Awards today', value = st.awardsToday }, { label = 'Daily cap', value = st.dailyCap .. ' RP' },
+            } },
+        { title = 'Recent races', icon = 'flag-checkered', arrow = true, description = 'Pick a race to void it',
+            onSelect = openRaces },
+        { title = 'Players', icon = 'users', arrow = true, description = 'Open a player, then Rank, to view or set RP',
+            onSelect = openPlayers },
+        { title = 'Top 10', readOnly = true },
+    }
+    for i, t in ipairs(st.top or {}) do
+        opts[#opts + 1] = { title = ('%d. %s'):format(i, t.username or '?'), readOnly = true,
+            description = ('%s · %d RP'):format(t.rank or '?', tonumber(t.rank_points) or 0), icon = 'trophy',
+            iconColor = i == 1 and '#d4a017' or nil }
+    end
+    lib.registerContext({ id = 'spz_admin_ranking', title = 'Ranking', menu = 'spz_admin_main', options = opts })
+    lib.showContext('spz_admin_ranking')
+end
+
 -- ── Player ───────────────────────────────────────────────────────────────────
 
 function openPlayer(id, backTo)
@@ -168,6 +275,9 @@ function openPlayer(id, backTo)
     add({ title = 'Troll', icon = 'face-grin-squint-tears', arrow = true,
         description = 'Possess, invert controls, launch, pop tyres, drunk…',
         onSelect = function() openTroll(p, 'spz_admin_player') end })
+    add({ title = 'Rank', icon = 'ranking-star', arrow = true,
+        description = 'Rank points, recent races, set RP, void a race',
+        onSelect = function() openRank(p, 'spz_admin_player') end })
     add({ title = 'Send message', icon = 'message',
         onSelect = function()
             local r = lib.inputDialog('Message ' .. p.name, { { type = 'textarea', label = 'Message', required = true, max = 300 } })
@@ -432,6 +542,167 @@ local function openAdmins()
     lib.showContext('spz_admin_admins')
 end
 
+-- ── Tracks ───────────────────────────────────────────────────────────────────
+-- Maker, editor and manager for race tracks. Everything lives in spz-races
+-- (client/creator.lua, client/editor.lua, server/trackadmin.lua); this is the
+-- menu over it. Every callback is admin-checked again in spz-races.
+
+local function racesUp()
+    if GetResourceState('spz-races') == 'started' then return true end
+    Admin.Notify('spz-races is not running', 'error')
+    return false
+end
+
+local function trackToolBusy()
+    local ok1, c = pcall(function() return exports['spz-races']:IsTrackCreatorActive() end)
+    local ok2, e = pcall(function() return exports['spz-races']:IsTrackEditorActive() end)
+    return (ok1 and c) or (ok2 and e)
+end
+
+local function tpToTrack(t)
+    if not t.start then return end
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    local ent = (veh ~= 0 and GetPedInVehicleSeat(veh, -1) == ped) and veh or ped
+    SetEntityCoords(ent, t.start.x, t.start.y, t.start.z + 0.5, false, false, false, false)
+    SetEntityHeading(ent, t.heading or 0.0)
+end
+
+local openTracks, openTrackList
+
+local function openTrack(t, filter)
+    local function back() openTrackList(filter) end
+    local opts = {
+        { title = t.enabled and 'On — offered in the race poll' or 'OFF — never offered in the poll',
+            icon = t.enabled and 'toggle-on' or 'toggle-off', iconColor = t.enabled and '#3dbf7a' or '#e05252',
+            description = 'Click to switch ' .. (t.enabled and 'off' or 'on'),
+            onSelect = function()
+                local ok, msg = lib.callback.await('spz-races:trackAdmin:setEnabled', false, t.id, not t.enabled)
+                done(ok, ('%s is now %s'):format(t.name, t.enabled and 'off' or 'on'), msg)
+                if ok then t.enabled = not t.enabled end
+                openTrack(t, filter)
+            end },
+        { title = 'Edit gates', icon = 'pen-ruler', description = 'Teleports you to the start and opens the in-world editor',
+            onSelect = function()
+                if trackToolBusy() then return Admin.Notify('A track tool is already open', 'error') end
+                tpToTrack(t)
+                TriggerEvent('SPZ:startTrackEditor', { id = t.id })
+            end },
+        { title = 'Laps and poll weight…', icon = 'sliders',
+            description = ('%d laps · weight %s (higher = offered more often)'):format(t.laps, tostring(t.poll_weight)),
+            onSelect = function()
+                local fields = {
+                    { type = 'number', label = 'Poll weight', description = '0 = never picked at random', min = 0, max = 100, default = t.poll_weight },
+                }
+                if t.type ~= 'sprint' then
+                    table.insert(fields, 1, { type = 'number', label = 'Laps', min = 1, max = 20, default = t.laps, required = true })
+                end
+                local r = lib.inputDialog(t.name, fields)
+                if not r then return openTrack(t, filter) end
+                local laps, weight = t.type ~= 'sprint' and r[1] or nil, t.type ~= 'sprint' and r[2] or r[1]
+                local ok, msg = lib.callback.await('spz-races:trackAdmin:setMeta', false, t.id, laps, weight)
+                done(ok, 'Saved', msg)
+                if ok then t.laps = laps or t.laps; t.poll_weight = weight or t.poll_weight end
+                openTrack(t, filter)
+            end },
+        { title = 'Teleport to start', icon = 'location-arrow', disabled = not t.start,
+            onSelect = function() tpToTrack(t) end },
+    }
+    if t.custom then
+        opts[#opts + 1] = {
+            title = t.builtin and 'Revert to original' or 'Delete track',
+            icon = t.builtin and 'rotate-left' or 'trash', iconColor = '#e05252',
+            description = t.builtin and 'Drops your gate edits, the built-in layout comes back' or 'Made in the track maker',
+            onSelect = function()
+                if not confirm((t.builtin and 'Revert ' or 'Delete ') .. t.name .. '?', 'This cannot be undone.') then return openTrack(t, filter) end
+                local ok, msg = lib.callback.await('spz-races:deleteTrack', false, { id = t.id })
+                done(ok, msg or 'Done', msg)
+                back()
+            end,
+        }
+    end
+    lib.registerContext({
+        id = 'spz_admin_track', title = t.name, menu = 'spz_admin_tracklist',
+        options = opts,
+    })
+    lib.showContext('spz_admin_track')
+end
+
+--- filter: 'circuit' | 'sprint' | 'off' | 'custom'
+function openTrackList(filter)
+    local list = lib.callback.await('spz-races:trackAdmin:list', false)
+    if not list then return Admin.Notify('No permission', 'error') end
+    local opts = {}
+    for _, t in ipairs(list) do
+        local show = (filter == 'off' and not t.enabled) or (filter == 'custom' and t.custom)
+            or (filter == t.type)
+        if show then
+            opts[#opts + 1] = {
+                title = t.name, arrow = true,
+                icon = t.enabled and 'circle-check' or 'circle-xmark', iconColor = t.enabled and '#3dbf7a' or '#e05252',
+                description = ('%s · %d laps · %d gates · weight %s%s'):format(t.type, t.laps, t.cps, tostring(t.poll_weight),
+                    t.custom and (t.builtin and ' · edited' or ' · custom') or ''),
+                onSelect = function() openTrack(t, filter) end,
+            }
+        end
+    end
+    if #opts == 0 then opts[1] = { title = 'No tracks here', readOnly = true } end
+    local titles = { circuit = 'Circuits', sprint = 'Sprints', off = 'Switched off', custom = 'Made / edited in game' }
+    lib.registerContext({ id = 'spz_admin_tracklist', title = ('%s (%d)'):format(titles[filter] or 'Tracks', #opts),
+        menu = 'spz_admin_tracks', options = opts })
+    lib.showContext('spz_admin_tracklist')
+end
+
+function openTracks()
+    if not racesUp() then return end
+    local list = lib.callback.await('spz-races:trackAdmin:list', false)
+    if not list then return Admin.Notify('No permission', 'error') end
+    local n = { circuit = 0, sprint = 0, off = 0, custom = 0 }
+    for _, t in ipairs(list) do
+        n[t.type] = (n[t.type] or 0) + 1
+        if not t.enabled then n.off = n.off + 1 end
+        if t.custom then n.custom = n.custom + 1 end
+    end
+
+    lib.registerContext({
+        id = 'spz_admin_tracks', title = 'Tracks', menu = 'spz_admin_main',
+        options = {
+            { title = 'Make a new track', icon = 'plus', iconColor = '#3dbf7a',
+                description = 'Drive the route and drop gates with [E]',
+                onSelect = function()
+                    if trackToolBusy() then return Admin.Notify('A track tool is already open', 'error') end
+                    local r = lib.inputDialog('New track', {
+                        { type = 'input', label = 'Name', required = true, min = 3, max = 40 },
+                        { type = 'select', label = 'Type', required = true, default = 'circuit',
+                            options = { { value = 'circuit', label = 'Circuit (laps)' }, { value = 'sprint', label = 'Sprint (A to B)' } } },
+                        { type = 'number', label = 'Laps (circuit)', min = 1, max = 20, default = 3 },
+                        { type = 'slider', label = 'Gate width (m)', min = 3, max = 40, default = 12 },
+                    })
+                    if not r then return openTracks() end
+                    TriggerEvent('SPZ:startTrackCreator', {
+                        name = r[1], type = r[2], laps = r[2] == 'sprint' and 1 or (r[3] or 3), defaultWidth = r[4],
+                    })
+                end },
+            { title = ('Circuits (%d)'):format(n.circuit), icon = 'rotate', arrow = true,
+                onSelect = function() openTrackList('circuit') end },
+            { title = ('Sprints (%d)'):format(n.sprint), icon = 'arrow-right-long', arrow = true,
+                onSelect = function() openTrackList('sprint') end },
+            { title = ('Switched off (%d)'):format(n.off), icon = 'toggle-off', arrow = true,
+                onSelect = function() openTrackList('off') end },
+            { title = ('Made / edited in game (%d)'):format(n.custom), icon = 'pen-ruler', arrow = true,
+                onSelect = function() openTrackList('custom') end },
+            { title = 'Turn every track back on', icon = 'arrows-rotate', iconColor = '#e8a33d',
+                description = 'Clears all on/off, laps and weight changes',
+                onSelect = function()
+                    if not confirm('Reset the track manager?', 'Every track goes back on with its original laps and weight.') then return openTracks() end
+                    done(lib.callback.await('spz-races:trackAdmin:resetAll', false), 'All tracks on')
+                    openTracks()
+                end },
+        },
+    })
+    lib.showContext('spz_admin_tracks')
+end
+
 -- ── Main ─────────────────────────────────────────────────────────────────────
 
 function openMain()
@@ -449,6 +720,8 @@ function openMain()
     opts[#opts + 1] = { title = 'Self', icon = 'user-shield', arrow = true, description = 'Noclip, god mode, teleport', onSelect = openSelf }
     opts[#opts + 1] = { title = 'Dev tools', icon = 'code', arrow = true, description = 'Copy coords, overlay, inspector', onSelect = openDev }
     opts[#opts + 1] = { title = 'Admins', icon = 'user-shield', arrow = true, description = 'Give / remove admin', onSelect = openAdmins }
+    opts[#opts + 1] = { title = 'Ranking', icon = 'ranking-star', arrow = true, description = 'Overview, top 10, void races, set RP', onSelect = openRanking }
+    opts[#opts + 1] = { title = 'Tracks', icon = 'route', arrow = true, description = 'Make, edit, switch tracks on / off', onSelect = openTracks }
     opts[#opts + 1] = { title = 'Server', icon = 'server', arrow = true, description = 'Announce, weather, time, cleanup', onSelect = openServer }
 
     lib.registerContext({ id = 'spz_admin_main', title = 'SPiceZ Admin', options = opts })

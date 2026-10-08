@@ -33,6 +33,11 @@ ace-gated on the server. The menu only displays things; the server decides what 
   entity inspector.
 - **Admins:** give admin to any online player from their player page, and see or remove
   everyone given admin that way. Admins from server.cfg are never touched.
+- **Ranking** (needs `spz-progression`): class counts, races scored today, daily-cap hits, the
+  top 10, and recent rated races, where you can void a race to reverse every rank-point change in
+  it. On a player's page, **Rank** shows their rank, RP, streak and recent races, and lets you set
+  their rank points. Set and void actions are logged. These are the only rank admin controls;
+  there are no rank chat commands.
 - **Server:** announcements, weather, time, and clearing empty vehicles nearby.
 
 Admin actions are logged to the console and, if it is running, to `spz-log` (`Config.LogCategory`).
@@ -71,6 +76,7 @@ Without these lines, a granted player can use this menu only, and the menu tells
 | Server | `server/main.lua` | Permission check, queries, player/server actions, logging |
 | Server | `server/admins.lua` | Give / remove admin, `admins.json` |
 | Server | `server/view.lua` | Bucket moves for spectate / ride-along |
+| Server | `server/rank.lua` | Ranking callbacks (calls spz-progression's admin exports) |
 
 ## Commands
 
