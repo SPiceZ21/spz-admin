@@ -42,6 +42,20 @@ local function disable(...)
     for _, c in ipairs({ ... }) do DisableControlAction(0, c, true) end
 end
 
+-- spz-vehfunc keeps every car invincible (it re-protects every 500 ms), so a
+-- troll that has to BREAK the car first asks it to stand down on our car for
+-- `seconds`, then strips the protection. Godmode resumes by itself afterwards.
+local function unprotect(veh, seconds)
+    TriggerEvent("spz-admin:godmodePause", math.floor(seconds * 1000))
+    SetEntityInvincible(veh, false)
+    SetEntityCanBeDamaged(veh, true)
+    SetEntityProofs(veh, false, false, false, false, false, false, false, false)
+    SetVehicleTyresCanBurst(veh, true)
+    SetVehicleCanBeVisiblyDamaged(veh, true)
+    SetVehicleEngineCanDegrade(veh, true)
+    SetVehicleStrong(veh, false)
+end
+
 -- ── Car trolls (need a vehicle) ─────────────────────────────────────────────
 
 local Car = {}
@@ -73,9 +87,13 @@ function Car.upside(veh)
     SetEntityRotation(veh, 180.0, 0.0, GetEntityHeading(veh), 2, true)
 end
 
-function Car.tires(veh)
-    SetVehicleTyresCanBurst(veh, true)
+-- Flat for `seconds`, then fixed (godmode never re-inflates tyres itself).
+function Car.tires(veh, seconds)
+    unprotect(veh, seconds + 1)
     for wheel = 0, 7 do SetVehicleTyreBurst(veh, wheel, true, 1000.0) end
+    timed(veh, seconds, nil, function(v)
+        for wheel = 0, 7 do SetVehicleTyreFixed(v, wheel) end
+    end)
 end
 
 function Car.stall(veh, seconds)
@@ -107,12 +125,16 @@ function Car.slippery(veh, seconds)
 end
 
 function Car.limiter(veh, seconds)
-    SetVehicleMaxSpeed(veh, 8.0)   -- ~30 km/h
-    timed(veh, seconds, nil, function(v) SetVehicleMaxSpeed(v, 0.0) end)
+    -- re-applied every frame: other scripts touch top speed too
+    timed(veh, seconds, function(v) SetVehicleMaxSpeed(v, 8.0) end,   -- ~30 km/h
+        function(v) SetVehicleMaxSpeed(v, 999.0) end)                 -- uncapped again
 end
 
-function Car.smoke(veh)
-    SetVehicleEngineHealth(veh, 120.0)   -- heavy smoke, still drives
+-- Heavy smoke for `seconds` (the engine still drives), then repaired.
+function Car.smoke(veh, seconds)
+    unprotect(veh, seconds + 1)
+    timed(veh, seconds, function(v) SetVehicleEngineHealth(v, 120.0) end,
+        function(v) SetVehicleEngineHealth(v, 1000.0) end)
 end
 
 function Car.paint(veh)
@@ -122,7 +144,7 @@ function Car.paint(veh)
 end
 
 function Car.horn(veh, seconds)
-    StartVehicleHorn(veh, seconds * 1000, GetHashKey("HELDDOWN"), false)
+    StartVehicleHorn(veh, seconds * 1000, "HELDDOWN", false)
 end
 
 function Car.lights(veh, seconds)
@@ -142,8 +164,15 @@ function Car.lights(veh, seconds)
     end)
 end
 
+-- Blows the car up. The driver survives: spz-core keeps players invincible,
+-- and the blast throws them out.
 function Car.explode(veh)
+    unprotect(veh, 6)
+    SetVehicleEngineHealth(veh, -4000.0)
+    SetVehiclePetrolTankHealth(veh, -4000.0)
     NetworkExplodeVehicle(veh, true, false, false)
+    local c = GetEntityCoords(veh)
+    AddExplosion(c.x, c.y, c.z, 7, 1.0, true, false, 1.0)   -- visuals + push if the net call is ignored
 end
 
 function Car.throttle(veh, seconds)
@@ -191,21 +220,34 @@ end
 
 local Ped = {}
 
---- WASD flipped: left steers right, W brakes, S accelerates. On foot too.
+--- W <-> S and A <-> D, in a car and on foot.
+---   car:     W reverses / brakes, S accelerates, A steers right, D steers left
+---   on foot: W walks back, S walks forward, A goes right, D goes left
+--- On foot GTA reads movement from BOTH the axes (30/31) and the single-
+--- direction keys (32 up, 33 down, 34 left, 35 right), so all of them are
+--- taken over — disabling only the axes left the keys working normally.
 function Ped.invert(ped, seconds)
     timed(ped, seconds, function()
         if IsPedInAnyVehicle(PlayerPedId(), false) then
-            disable(VEH_STEER, VEH_LEFT, VEH_RIGHT, VEH_ACCEL, VEH_BRAKE)
+            disable(VEH_STEER, VEH_LEFT, VEH_RIGHT, 60, 61, 62, VEH_ACCEL, VEH_BRAKE)
             local steer = GetDisabledControlNormal(0, VEH_STEER)
-            local acc   = GetDisabledControlNormal(0, VEH_ACCEL)
-            local brk   = GetDisabledControlNormal(0, VEH_BRAKE)
-            SetControlNormal(0, VEH_STEER, -steer)
-            SetControlNormal(0, VEH_ACCEL, brk)
-            SetControlNormal(0, VEH_BRAKE, acc)
+            local acc   = GetDisabledControlNormal(0, VEH_ACCEL)   -- W
+            local brk   = GetDisabledControlNormal(0, VEH_BRAKE)   -- S
+            SetControlNormal(0, VEH_STEER, -steer)                 -- A <-> D
+            SetControlNormal(0, VEH_ACCEL, brk)                    -- S drives forward
+            SetControlNormal(0, VEH_BRAKE, acc)                    -- W brakes / reverses
         else
-            disable(MOVE_LR, MOVE_UD)
-            SetControlNormal(0, MOVE_LR, -GetDisabledControlNormal(0, MOVE_LR))
-            SetControlNormal(0, MOVE_UD, -GetDisabledControlNormal(0, MOVE_UD))
+            disable(MOVE_LR, MOVE_UD, 32, 33, 34, 35)
+            local w = GetDisabledControlNormal(0, 32)
+            local s = GetDisabledControlNormal(0, 33)
+            local a = GetDisabledControlNormal(0, 34)
+            local d = GetDisabledControlNormal(0, 35)
+            -- axes too, so a controller's stick is flipped as well
+            local lr = -GetDisabledControlNormal(0, MOVE_LR)
+            local ud = -GetDisabledControlNormal(0, MOVE_UD)
+            if w + s + a + d > 0 then lr, ud = a - d, w - s end    -- keys win: W->back, A->right
+            SetControlNormal(0, MOVE_LR, lr)
+            SetControlNormal(0, MOVE_UD, ud)                       -- up = -1, so W (ud>0) walks back
         end
     end)
 end
@@ -250,8 +292,21 @@ function Ped.fling(ped)
     SetEntityVelocity(ped, math.random(-20, 20) + 0.0, math.random(-20, 20) + 0.0, 25.0)
 end
 
-function Ped.fire(ped)
+-- On fire for a few seconds. spz-core's invincibility is paused just long
+-- enough to ignite; its health top-up keeps running, so they never die.
+function Ped.fire(ped, seconds)
+    local secs = math.min(seconds, 8)
+    TriggerEvent("spz-admin:pedDamagePause", math.floor(secs * 1000))
+    SetEntityInvincible(ped, false)
+    SetEntityProofs(ped, false, false, false, false, false, false, false, false)
+    if IsPedInAnyVehicle(ped, false) then Car.eject(GetVehiclePedIsIn(ped, false)); ped = PlayerPedId() end
     StartEntityFire(ped)
+    timed(ped, secs, function(p)
+        if not IsEntityOnFire(p) then StartEntityFire(p) end
+    end, function(p)
+        StopEntityFire(p)
+        SetEntityInvincible(p, true)
+    end)
 end
 
 RegisterNetEvent('spz-admin:troll', function(action, seconds)

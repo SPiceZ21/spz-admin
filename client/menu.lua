@@ -34,7 +34,7 @@ local CAR_TROLLS = {
     { 'spin',     'Spin out',         'rotate-right',       'Spin the car around' },
     { 'upside',   'Flip upside down', 'arrows-rotate',      'Roof on the ground' },
     { 'hop',      'Bunny hop',        'arrow-up',           'Car keeps hopping (timed)' },
-    { 'tires',    'Pop tyres',        'circle-exclamation', 'Burst all tyres' },
+    { 'tires',    'Pop tyres',        'circle-exclamation', 'Burst all tyres (timed)' },
     { 'stall',    'Stall engine',     'power-off',          'Engine dead (timed)' },
     { 'throttle', 'Stuck throttle',   'gauge-high',         'Pedal to the floor (timed)' },
     { 'nobrakes', 'Brake failure',    'ban',                'No brake, no handbrake (timed)' },
@@ -45,21 +45,21 @@ local CAR_TROLLS = {
     { 'ghostcar', 'Invisible car',    'eye-slash',          'Car vanishes, driver floats (timed)' },
     { 'eject',    'Eject',            'person-falling',     'Throw them out of the car' },
     { 'lockin',   'Lock in',          'lock',               "Can't get out (timed)" },
-    { 'smoke',    'Smoking engine',   'smog',               'Heavy engine smoke' },
+    { 'smoke',    'Smoking engine',   'smog',               'Heavy engine smoke (timed)' },
     { 'paint',    'Random paint',     'palette',            'Random primary + secondary colour' },
     { 'horn',     'Stuck horn',       'bullhorn',           'Horn held down (timed)' },
     { 'lights',   'Disco lights',     'lightbulb',          'Headlights + indicators flash (timed)' },
-    { 'explode',  'Explode car',      'bomb',               'Kills them too', true, true },
+    { 'explode',  'Explode car',      'bomb',               'Blows the car up — they survive', true, true },
 }
 
 local PLAYER_TROLLS = {
-    { 'invert',   'Invert controls',  'right-left',         'WASD flipped — left is right, W brakes (timed)' },
+    { 'invert',   'Invert controls',  'right-left',         'W↔S and A↔D swapped, in a car and on foot (timed)' },
     { 'drunk',    'Drunk',            'wine-glass',         'Blurry, shaky, steering drifts (timed)' },
     { 'lookback', 'Look backwards',   'eye',                'Camera stuck facing behind (timed)' },
     { 'blind',    'Blackout',         'moon',               'Screen goes black for a few seconds' },
     { 'ragdoll',  'Ragdoll',          'person-falling-burst', 'Knock them over (ejects from a car)' },
     { 'fling',    'Fling',            'wind',               'Launch them through the air' },
-    { 'fire',     'Set on fire',      'fire',               'Will probably kill them', false, true },
+    { 'fire',     'Set on fire',      'fire',               'Burns for a few seconds — they survive', false, true },
 }
 
 local function openTroll(p, backTo)
