@@ -582,7 +582,7 @@ local function openTrack(t, filter)
                 if ok then t.enabled = not t.enabled end
                 openTrack(t, filter)
             end },
-        { title = 'Edit gates', icon = 'pen-ruler', description = 'Teleports you to the start and opens the in-world editor',
+        { title = 'Edit gates', icon = 'pen-ruler', description = 'Teleports you to the start and opens Track Studio (3D editor)',
             onSelect = function()
                 if trackToolBusy() then return Admin.Notify('A track tool is already open', 'error') end
                 tpToTrack(t)
@@ -668,7 +668,7 @@ function openTracks()
         id = 'spz_admin_tracks', title = 'Tracks', menu = 'spz_admin_main',
         options = {
             { title = 'Make a new track', icon = 'plus', iconColor = '#3dbf7a',
-                description = 'Drive the route and drop gates with [E]',
+                description = 'Drive the route dropping gates with [E], or build it in the 3D camera [F3]',
                 onSelect = function()
                     if trackToolBusy() then return Admin.Notify('A track tool is already open', 'error') end
                     local r = lib.inputDialog('New track', {
