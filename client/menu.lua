@@ -668,7 +668,7 @@ function openTracks()
         id = 'spz_admin_tracks', title = 'Tracks', menu = 'spz_admin_main',
         options = {
             { title = 'Make a new track', icon = 'plus', iconColor = '#3dbf7a',
-                description = 'Drive the route dropping gates with [E], or build it in the 3D camera [F3]',
+                description = 'Drive the route dropping gates with [E], or build it in the 3D camera [P]',
                 onSelect = function()
                     if trackToolBusy() then return Admin.Notify('A track tool is already open', 'error') end
                     local r = lib.inputDialog('New track', {
