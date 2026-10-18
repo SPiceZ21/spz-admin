@@ -377,7 +377,7 @@ Admin.Callback('announce', function(src, text)
     if type(text) ~= 'string' or text == '' then return false end
     TriggerClientEvent('ox_lib:notify', -1, {
         title = 'Announcement', description = text:sub(1, 300), type = 'inform',
-        duration = 12000, position = 'top',
+        duration = 12000,
     })
     Admin.Log(src, 'Announce', text)
     return true
