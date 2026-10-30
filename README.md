@@ -1,104 +1,77 @@
 # spz-admin
 
-> ox_lib admin menu · `v1.0.0`
+> Admin menu: players, spectate / ride along, buckets, noclip and dev tools.
+
+![version](https://img.shields.io/badge/version-1.5.0-ff6200) ![SPiceZ-Core](https://img.shields.io/badge/SPiceZ--Core-beta-18181b)
 
 ## Overview
 
-`spz-admin` is a lightweight admin tool built on `ox_lib` context menus. Every action is
-ace-gated on the server. The menu only displays things; the server decides what is allowed.
+An ox_lib admin menu (`F1`) for player management, spectating or riding along with anyone in any bucket, a bucket browser, self tools, noclip and dev helpers.
 
-- **Spectate any player in any routing bucket.** The server moves you into the target's
-  bucket, follows them if they change buckets (race start/end), and puts you back when you stop.
-- **Ride along.** You sit hidden in a free seat of the target's car, with your own camera.
-  If the target is on foot or the car is full, you get the spectator camera instead. When they
-  get a new car (for example a race respawn), you are put back in it.
-- **Players:** go to, bring, freeze, heal/revive, repair/flip their car, message, send to a
-  bucket, DNF from a race, remove from the queue, kill, kick, and copy their position or license.
-- **Troll:**
-  - **Possess:** spectate a player in any bucket and drive their car (or walk them) with your
-    own WASD. Space is handbrake or jump, Shift is sprint, Backspace stops.
-  - **Car:** launch, boost, brake wall, spin out, flip upside down, bunny hop, pop tyres, stall,
-    stuck throttle, brake failure, wobbly steering, ice tyres, speed limit, moon gravity,
-    invisible car, eject, lock in, smoking engine, random paint, stuck horn, disco lights, explode.
-  - **Player:** invert controls (WASD flipped), drunk, look backwards, blackout, ragdoll, fling,
-    set on fire.
-  - Timed trolls last `Config.Troll.duration` seconds and undo themselves. Trolls and possess
-    are off for racers unless `Config.Troll.allowInRace` is set.
-- **Buckets:** list every bucket with its spz-core label and players, join one, or spectate
-  only the players in it.
-- **Self:** noclip, god mode, invisibility, heal, teleport to the waypoint or to coords
-  (you can paste a `vec3`/`vec4`), return to bucket 0, repair/flip your car.
-- **Dev tools:** copy `vec3`, `vec4`, heading, `x, y, z`, a Lua table or JSON. Also copy the
-  camera coords/rot/FOV or your vehicle model, turn on a live coords overlay, or use the
-  entity inspector.
-- **Admins:** give admin to any online player from their player page, and see or remove
-  everyone given admin that way. Admins from server.cfg are never touched.
-- **Ranking** (needs `spz-progression`): class counts, races scored today, daily-cap hits, the
-  top 10, and recent rated races, where you can void a race to reverse every rank-point change in
-  it. On a player's page, **Rank** shows their rank, RP, streak and recent races, and lets you set
-  their rank points. Set and void actions are logged. These are the only rank admin controls;
-  there are no rank chat commands.
-- **Server:** announcements, weather, time, and clearing empty vehicles nearby.
+## Features
 
-Admin actions are logged to the console and, if it is running, to `spz-log` (`Config.LogCategory`).
+- Player management
+- Spectate / ride along across buckets
+- Bucket browser
+- Noclip
+- Coordinate and entity tools
 
-## Permissions
+## Requirements
+
+| Resource | Type |
+|---|---|
+| `ox_lib` | third-party |
+
+## Installation
+
+Included in the [txAdmin recipe](https://github.com/SPiceZ21/spz-txrecipe). Manual install:
+
+1. Download `spz-admin` from GitHub (latest release, or the repository) into your `resources` folder.
+2. Add to `server.cfg`, after its requirements:
 
 ```cfg
-add_ace group.admin spz.admin allow
-add_principal identifier.license:<yours> group.admin
+ensure spz-admin
 ```
 
-### Giving admin from the menu
+## Configuration
 
-Grants are saved by license in `admins.json` (gitignored) and re-applied on every join, so they
-survive restarts. spz-admin always honours them. To make the grant a real `spz.admin` ace that
-other resources see too, let the resource add principals:
+- `config.lua`
 
-```cfg
-add_ace resource.spz-admin command.add_principal allow
-add_ace resource.spz-admin command.remove_principal allow
-```
-
-Without these lines, a granted player can use this menu only, and the menu tells you so.
-
-## Structure
-
-| Side | File | Purpose |
-|---|---|---|
-| Shared | `config.lua` | Ace, keys, noclip speeds, precision, weather list |
-| Client | `client/utils.lua` | Callback wrapper, formatting, teleport, events aimed at a target player |
-| Client | `client/view.lua` | Spectate + ride-along |
-| Client | `client/noclip.lua` | Noclip |
-| Client | `client/dev.lua` | Coord copy, overlay, entity inspector |
-| Client | `client/troll.lua` | Trolls + possess, run on the target's client |
-| Client | `client/menu.lua` | ox_lib menus + commands |
-| Server | `server/main.lua` | Permission check, queries, player/server actions, logging |
-| Server | `server/admins.lua` | Give / remove admin, `admins.json` |
-| Server | `server/view.lua` | Bucket moves for spectate / ride-along |
-| Server | `server/rank.lua` | Ranking callbacks (calls spz-progression's admin exports) |
+See the file for every option.
 
 ## Commands
 
-| Command | Effect |
-|---|---|
-| `/admin` (`F1`) | Open the menu |
-| `/noclip` | Toggle noclip (unbound by default) |
-| `/revive [id]` | Revive yourself, or a player (works while you're dead) |
-| `/spec <id>` | Spectate a player |
-| `/ride <id>` | Ride along with a player |
-| `/vec3` · `/vec4` · `/heading` | Copy your position to the clipboard |
-| `/carcode` | Copy the spawn code of the car you are in |
+| Command | Who | Description |
+|---|---|---|
+| `/admin` | admin | Open the admin menu |
+| `/noclip` | admin | Toggle noclip |
+| `/revive` | admin | `/revive [id]` |
+| `/ride` | admin | `/ride <id>` ride along |
+| `/spec` | admin | `/spec <id>` spectate a player |
+| `/carcode` | dev | Copy your car's spawn code |
+| `/heading` | dev | Copy your heading |
+| `/vec3` | dev | Copy your coords |
+| `/vec4` | dev | Copy your coords + heading |
 
-While spectating: `←/→` switch player · `↑` toggle spectate/ride · `Backspace` stop.
-Entity inspector: `E` copy vec4 · `G` copy model · `DEL` delete the entity.
+## Key binds
+
+Rebindable in **Settings → Key Bindings → FiveM**.
+
+| Action | Default |
+|---|---|
+| Admin: open menu | `F1` |
+| Admin: toggle noclip | _unbound_ |
 
 ## Exports
 
-| Side | Export | Returns |
-|---|---|---|
-| Server | `IsAdmin(src)` | `boolean` |
+| Export | Side |
+|---|---|
+| `IsAdmin` | server |
 
-## Dependencies
+```lua
+exports["spz-admin"]:IsAdmin(...)
+```
 
-`ox_lib` · optional: `spz-core` (bucket registry, weather/time), `spz-races` (DNF, queue), `spz-log`
+---
+
+Part of **SPiceZ-Core** — [documentation](https://github.com/SPiceZ21/Docs) · [all modules](https://github.com/SPiceZ21/Docs/blob/main/modules/README.md)
