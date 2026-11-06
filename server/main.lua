@@ -32,8 +32,8 @@ function Admin.Notify(src, description, ntype)
 end
 
 function Admin.Log(src, title, message)
-    if GetResourceState('spz-analytics') == 'started' then
-        pcall(function() exports['spz-analytics']:AdminAction(src, title, message) end)
+    if GetResourceState('spz-core') == 'started' then
+        pcall(function() exports['spz-core']:AdminAction(src, title, message) end)
     end
     print(('^5[spz-admin]^7 %s (%d): %s — %s'):format(GetPlayerName(src) or 'console', src, title, message or ''))
     if GetResourceState('spz-discord') == 'started' then
