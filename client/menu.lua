@@ -126,7 +126,7 @@ end
 
 local function openRank(p, backTo)
     local r = Admin.Call('rankInfo', p.id)
-    if not r then return Admin.Notify('No rank data (spz-progression not running, or player has no profile)', 'error') end
+    if not r then return Admin.Notify('No rank data (progression not running, or player has no profile)', 'error') end
 
     local opts = {
         {
@@ -192,7 +192,7 @@ end
 
 function openRanking()
     local st = Admin.Call('rankStats')
-    if not st then return Admin.Notify('spz-progression is not running', 'error') end
+    if not st then return Admin.Notify('progression (spz-races) is not running', 'error') end
     local opts = {
         { title = 'Overview', icon = 'chart-simple', readOnly = true,
             description = ('%d race(s) scored today · %d daily-cap hit(s)'):format(st.racesToday, st.capHits),

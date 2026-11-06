@@ -4,14 +4,14 @@
 -- Admin.Callback wrapper gates on the admin ace before anything runs.
 
 local function progression()
-    return GetResourceState('spz-progression') == 'started'
+    return GetResourceState('spz-races') == 'started'
 end
 
 local function call(fn, ...)
-    if not progression() then return nil, 'spz-progression is not running' end
+    if not progression() then return nil, 'progression (spz-races) is not running' end
     local args = { ... }
     local ok, a, b = pcall(function()
-        local res = exports['spz-progression']
+        local res = exports['spz-races']
         return res[fn](res, table.unpack(args))
     end)
     if not ok then return nil, tostring(a) end
