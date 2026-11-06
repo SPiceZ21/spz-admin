@@ -37,7 +37,7 @@ Config.Grant = {
     group = 'group.admin',
 }
 
--- spz-log category for admin actions (if spz-log is running).
+-- spz-discord category for admin actions (if spz-discord is running).
 Config.LogCategory = 'system'
 
 -- Decimal places for copied coordinates.

@@ -36,9 +36,9 @@ function Admin.Log(src, title, message)
         pcall(function() exports['spz-analytics']:AdminAction(src, title, message) end)
     end
     print(('^5[spz-admin]^7 %s (%d): %s — %s'):format(GetPlayerName(src) or 'console', src, title, message or ''))
-    if GetResourceState('spz-log') == 'started' then
+    if GetResourceState('spz-discord') == 'started' then
         pcall(function()
-            exports['spz-log']:Info(Config.LogCategory, 'Admin: ' .. title, message or '', nil, src)
+            exports['spz-discord']:Info(Config.LogCategory, 'Admin: ' .. title, message or '', nil, src)
         end)
     end
 end
